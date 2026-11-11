@@ -321,6 +321,22 @@
                                                 <tkcontrols:SettingsCard ContentAlignment="Left" IsEnabled="{x:Bind SupportsContrast, Mode=OneWay}">
                                                     <CheckBox x:Uid="PowerDisplay_Monitor_EnableContrast" IsChecked="{x:Bind EnableContrast, Mode=TwoWay}" />
                                                 </tkcontrols:SettingsCard>
+                                                <tkcontrols:SettingsCard x:Uid="PowerDisplay_Monitor_ContrastRange" IsEnabled="{x:Bind EnableContrast, Mode=OneWay}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <NumberBox
+                                                            x:Uid="PowerDisplay_Monitor_ContrastMin"
+                                                            Maximum="100"
+                                                            Minimum="0"
+                                                            SpinButtonPlacementMode="Compact"
+                                                            Value="{x:Bind ContrastMin, Mode=TwoWay}" />
+                                                        <NumberBox
+                                                            x:Uid="PowerDisplay_Monitor_ContrastMax"
+                                                            Maximum="100"
+                                                            Minimum="0"
+                                                            SpinButtonPlacementMode="Compact"
+                                                            Value="{x:Bind ContrastMax, Mode=TwoWay}" />
+                                                    </StackPanel>
+                                                </tkcontrols:SettingsCard>
                                                 <tkcontrols:SettingsCard ContentAlignment="Left" IsEnabled="{x:Bind SupportsVolume, Mode=OneWay}">
                                                     <CheckBox x:Uid="PowerDisplay_Monitor_EnableVolume" IsChecked="{x:Bind EnableVolume, Mode=TwoWay}" />
                                                 </tkcontrols:SettingsCard>

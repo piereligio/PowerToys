@@ -626,6 +626,8 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                 nameof(MonitorInfo.EnableRotation) or
                 nameof(MonitorInfo.EnableColorTemperature) or
                 nameof(MonitorInfo.EnablePowerState) or
+                nameof(MonitorInfo.ContrastMin) or
+                nameof(MonitorInfo.ContrastMax) or
                 nameof(MonitorInfo.IsHidden)))
             {
                 return;

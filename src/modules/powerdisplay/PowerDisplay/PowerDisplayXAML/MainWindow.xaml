@@ -560,8 +560,8 @@
                                                         helpers:SliderExtensions.MouseWheelChange="{x:Bind MouseWheelIncrement, Mode=OneWay}"
                                                         IsEnabled="{x:Bind IsInteractionEnabled, Mode=OneWay}"
                                                         IsTabStop="True"
-                                                        Maximum="100"
-                                                        Minimum="0"
+                                                        Maximum="{x:Bind ContrastMaximum, Mode=OneWay}"
+                                                        Minimum="{x:Bind ContrastMinimum, Mode=OneWay}"
                                                         Value="{x:Bind Contrast, Mode=TwoWay}" />
                                                 </Grid>
 

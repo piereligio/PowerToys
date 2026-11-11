@@ -30,6 +30,8 @@ namespace Microsoft.PowerToys.Settings.UI.Library
         private bool _enableRotation;
         private bool _enableColorTemperature;
         private bool _enablePowerState;
+        private int _contrastMin = ContinuousValueRange.AbsoluteMinimum;
+        private int _contrastMax = ContinuousValueRange.AbsoluteMaximum;
         private System.DateTime? _lastSeenUtc;
         private string _capabilitiesRaw = string.Empty;
         private List<VcpCodeDisplayInfo> _vcpCodesFormatted = new List<VcpCodeDisplayInfo>();
@@ -327,6 +329,46 @@ namespace Microsoft.PowerToys.Settings.UI.Library
                 if (_enablePowerState != value)
                 {
                     _enablePowerState = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the lowest contrast (0-100) the Power Display flyout slider and profile
+        /// applies may set on this monitor. Defaults to 0; values missing from older settings
+        /// files keep the default.
+        /// </summary>
+        [JsonPropertyName("contrastMin")]
+        public int ContrastMin
+        {
+            get => _contrastMin;
+            set
+            {
+                value = Math.Clamp(value, ContinuousValueRange.AbsoluteMinimum, ContinuousValueRange.AbsoluteMaximum);
+                if (_contrastMin != value)
+                {
+                    _contrastMin = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the highest contrast (0-100) the Power Display flyout slider and profile
+        /// applies may set on this monitor. Defaults to 100. An inverted pair is ignored at use
+        /// time (see <see cref="ContinuousValueRange.Normalize"/>).
+        /// </summary>
+        [JsonPropertyName("contrastMax")]
+        public int ContrastMax
+        {
+            get => _contrastMax;
+            set
+            {
+                value = Math.Clamp(value, ContinuousValueRange.AbsoluteMinimum, ContinuousValueRange.AbsoluteMaximum);
+                if (_contrastMax != value)
+                {
+                    _contrastMax = value;
                     OnPropertyChanged();
                 }
             }
@@ -762,6 +804,8 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             EnableRotation = other.EnableRotation;
             EnableColorTemperature = other.EnableColorTemperature;
             EnablePowerState = other.EnablePowerState;
+            ContrastMin = other.ContrastMin;
+            ContrastMax = other.ContrastMax;
             CapabilitiesRaw = other.CapabilitiesRaw;
             ReplaceVcpCodesFormatted(other.VcpCodesFormatted);
             SupportsBrightness = other.SupportsBrightness;
