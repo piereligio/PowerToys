@@ -128,15 +128,18 @@
                         </controls:SettingsGroup>
 
                         <controls:SettingsGroup x:Uid="PowerDisplay_AdvancedSettings" IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}">
-                            <tkcontrols:SettingsCard x:Uid="PowerDisplay_FollowBuiltInDisplayBrightness" HeaderIcon="{ui:FontIcon Glyph=&#xE706;}">
+                            <!--  Sub-options of the follow toggle live inside its expander (same pattern as Mouse utilities).  -->
+                            <tkcontrols:SettingsExpander
+                                x:Uid="PowerDisplay_FollowBuiltInDisplayBrightness"
+                                HeaderIcon="{ui:FontIcon Glyph=&#xE706;}"
+                                IsExpanded="{x:Bind ViewModel.FollowBuiltInDisplayBrightness, Mode=OneWay}">
                                 <ToggleSwitch IsOn="{x:Bind ViewModel.FollowBuiltInDisplayBrightness, Mode=TwoWay}" />
-                            </tkcontrols:SettingsCard>
-                            <tkcontrols:SettingsCard
-                                x:Uid="PowerDisplay_LowerContrastBelowMinimumBrightness"
-                                HeaderIcon="{ui:FontIcon Glyph=&#xE7A1;}"
-                                IsEnabled="{x:Bind ViewModel.FollowBuiltInDisplayBrightness, Mode=OneWay}">
-                                <ToggleSwitch IsOn="{x:Bind ViewModel.LowerContrastBelowMinimumBrightness, Mode=TwoWay}" />
-                            </tkcontrols:SettingsCard>
+                                <tkcontrols:SettingsExpander.Items>
+                                    <tkcontrols:SettingsCard x:Uid="PowerDisplay_LowerContrastBelowMinimumBrightness" IsEnabled="{x:Bind ViewModel.FollowBuiltInDisplayBrightness, Mode=OneWay}">
+                                        <ToggleSwitch IsOn="{x:Bind ViewModel.LowerContrastBelowMinimumBrightness, Mode=TwoWay}" />
+                                    </tkcontrols:SettingsCard>
+                                </tkcontrols:SettingsExpander.Items>
+                            </tkcontrols:SettingsExpander>
                             <tkcontrols:SettingsCard x:Uid="PowerDisplay_MaxCompatibilityMode" HeaderIcon="{ui:FontIcon Glyph=&#xE7B5;}">
                                 <ToggleSwitch IsOn="{x:Bind ViewModel.MaxCompatibilityMode, Mode=TwoWay}" />
                             </tkcontrols:SettingsCard>

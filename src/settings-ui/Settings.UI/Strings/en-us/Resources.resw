@@ -6224,7 +6224,7 @@ The break timer font matches the text font.</value>
     <value>Lower contrast below minimum brightness</value>
   </data>
   <data name="PowerDisplay_LowerContrastBelowMinimumBrightness.Description" xml:space="preserve">
-    <value>When the built-in display brightness is already at its minimum, pressing the brightness down key lowers the contrast of external monitors, down to each monitor's contrast range minimum. Pressing brightness up first restores contrast to the range maximum, then raises brightness. Requires "Follow built-in display brightness". Applies to monitors with contrast shown.</value>
+    <value>When the built-in display brightness is already at its minimum, pressing the brightness down key lowers the contrast of external monitors, down to each monitor's contrast range minimum. Pressing brightness up first restores contrast to the range maximum, then raises brightness. Applies to monitors with contrast shown.</value>
   </data>
   <data name="PowerDisplay_MaxCompatibilityMode.Header" xml:space="preserve">
     <value>Maximum compatibility mode</value>
