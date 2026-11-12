@@ -32,6 +32,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             MaxCompatibilityMode = false;
             LinkedLevelsActive = false;
             FollowBuiltInDisplayBrightness = false;
+            LowerContrastBelowMinimumBrightness = false;
             ExcludedFromSyncMonitorIds = new List<string>();
             CustomVcpMappings = new List<CustomVcpValueMapping>();
 
@@ -123,6 +124,16 @@ namespace Microsoft.PowerToys.Settings.UI.Library
         /// </summary>
         [JsonPropertyName("follow_builtin_display_brightness")]
         public bool FollowBuiltInDisplayBrightness { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether, once the built-in display brightness is at 0%,
+        /// further brightness-down key presses lower the external monitors' contrast (down to each
+        /// monitor's contrast range minimum), and brightness-up presses restore contrast to the range
+        /// maximum before brightness rises again. Requires <see cref="FollowBuiltInDisplayBrightness"/>.
+        /// Off by default.
+        /// </summary>
+        [JsonPropertyName("lower_contrast_below_minimum_brightness")]
+        public bool LowerContrastBelowMinimumBrightness { get; set; }
 
         /// <summary>
         /// Gets or sets the set of monitor <c>Id</c> values excluded from linked brightness.

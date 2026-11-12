@@ -52,6 +52,8 @@ public partial class MainViewModel
     /// </summary>
     private void OnBuiltInBrightnessChanged(object? sender, int value)
     {
+        int previous = NoteBuiltInBrightnessChange(value);
+
         if (!FollowBuiltInDisplayBrightness)
         {
             return;
@@ -65,9 +67,15 @@ public partial class MainViewModel
 
         // A profile or startup restore gives every monitor its own explicit value, including the
         // built-in panel. Mirroring the panel's echo would overwrite the externals' saved values.
-        if (Volatile.Read(ref _bulkApplyDepth) > 0 || _clock.UtcNow.Ticks < Interlocked.Read(ref _suppressFollowUntilTicks))
+        if (IsBulkApplyInProgress())
         {
             Logger.LogInfo($"[FollowBuiltInBrightness] Ignoring {value}% during profile/restore apply");
+            return;
+        }
+
+        // Contrast was lowered below 0% brightness: brightness-up raises contrast first.
+        if (TryHandleContrastZone(value, previous))
+        {
             return;
         }
 
@@ -107,6 +115,9 @@ public partial class MainViewModel
     {
         Interlocked.Increment(ref _bulkApplyDepth);
         _followBrightnessCommitTimer?.Stop();
+
+        // The profile sets explicit contrast values; the lowered-contrast state no longer applies.
+        ResetContrastZone();
         return new BulkApplyScope(this);
     }
 

@@ -411,6 +411,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             _followBrightnessCommitTimer?.Stop();
+            _clampedPressTimer?.Stop();
             if (_builtInBrightnessWatcher is not null)
             {
                 _builtInBrightnessWatcher.BrightnessChanged -= OnBuiltInBrightnessChanged;
@@ -564,6 +565,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             LinkedLevelsActive = settings.Properties.LinkedLevelsActive;
             FollowBuiltInDisplayBrightness = settings.Properties.FollowBuiltInDisplayBrightness;
+            SetLowerContrastBelowMinimumBrightness(settings.Properties.LowerContrastBelowMinimumBrightness);
 
             // Load custom VCP mappings (now using shared type from PowerDisplay.Common.Models)
             CustomVcpMappings = settings.Properties.CustomVcpMappings?.ToList() ?? new List<CustomVcpValueMapping>();
@@ -587,6 +589,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         CancelPendingLinkedBrightnessCommit();
         _followBrightnessCommitTimer?.Stop();
+        ResetContrastZone();
 
         if (!IsScanning)
         {

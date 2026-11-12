@@ -370,6 +370,20 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             }
         }
 
+        public bool LowerContrastBelowMinimumBrightness
+        {
+            get => _settings.Properties.LowerContrastBelowMinimumBrightness;
+            set
+            {
+                if (SetSettingsProperty(_settings.Properties.LowerContrastBelowMinimumBrightness, value, v => _settings.Properties.LowerContrastBelowMinimumBrightness = v))
+                {
+                    // PowerDisplay reloads this flag in ApplySettingsFromUI.
+                    SignalSettingsUpdated();
+                    Logger.LogInfo($"LowerContrastBelowMinimumBrightness changed to {value}");
+                }
+            }
+        }
+
         public bool ShowProfileSwitcher
         {
             get => _settings.Properties.ShowProfileSwitcher;

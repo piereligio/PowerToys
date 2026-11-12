@@ -131,6 +131,12 @@
                             <tkcontrols:SettingsCard x:Uid="PowerDisplay_FollowBuiltInDisplayBrightness" HeaderIcon="{ui:FontIcon Glyph=&#xE706;}">
                                 <ToggleSwitch IsOn="{x:Bind ViewModel.FollowBuiltInDisplayBrightness, Mode=TwoWay}" />
                             </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard
+                                x:Uid="PowerDisplay_LowerContrastBelowMinimumBrightness"
+                                HeaderIcon="{ui:FontIcon Glyph=&#xE7A1;}"
+                                IsEnabled="{x:Bind ViewModel.FollowBuiltInDisplayBrightness, Mode=OneWay}">
+                                <ToggleSwitch IsOn="{x:Bind ViewModel.LowerContrastBelowMinimumBrightness, Mode=TwoWay}" />
+                            </tkcontrols:SettingsCard>
                             <tkcontrols:SettingsCard x:Uid="PowerDisplay_MaxCompatibilityMode" HeaderIcon="{ui:FontIcon Glyph=&#xE7B5;}">
                                 <ToggleSwitch IsOn="{x:Bind ViewModel.MaxCompatibilityMode, Mode=TwoWay}" />
                             </tkcontrols:SettingsCard>

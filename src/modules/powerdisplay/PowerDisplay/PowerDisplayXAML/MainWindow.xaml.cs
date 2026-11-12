@@ -33,6 +33,7 @@ namespace PowerDisplay
         private readonly SettingsUtils _settingsUtils = SettingsUtils.Default;
         private MainViewModel? _viewModel;
         private HotkeyService? _hotkeyService;
+        private BrightnessKeyListener? _brightnessKeyListener;
         private WindowMessageHook? _messageHook;
 
         // Expose ViewModel as property for x:Bind
@@ -72,10 +73,19 @@ namespace PowerDisplay
                 _hotkeyService = new HotkeyService(_settingsUtils, ToggleWindow);
                 _hotkeyService.Initialize(hwnd);
 
-                // 6. Subclass WndProc to route WM_HOTKEY messages into HotkeyService.
+                // Raw input listener for the brightness keys ("lower contrast below minimum
+                // brightness"); registered only while that setting is active.
+                _brightnessKeyListener = new BrightnessKeyListener(hwnd);
+                _brightnessKeyListener.KeyPressed += (_, key) => _viewModel?.OnBrightnessKeyPressed(key);
+                _viewModel.BrightnessKeyContrastActiveChanged += OnBrightnessKeyContrastActiveChanged;
+                _brightnessKeyListener.SetEnabled(_viewModel.BrightnessKeyContrastActive);
+
+                // 6. Subclass WndProc to route WM_HOTKEY messages into HotkeyService and
+                // WM_INPUT into the brightness key listener (which never swallows it).
                 Logger.LogTrace("MainWindow constructor: Setting up WindowMessageHook");
-                _messageHook = new WindowMessageHook(this, (uMsg, wParam, _) =>
-                    _hotkeyService?.HandleMessage(uMsg, wParam) == true);
+                _messageHook = new WindowMessageHook(this, (uMsg, wParam, lParam) =>
+                    _hotkeyService?.HandleMessage(uMsg, wParam) == true
+                    || _brightnessKeyListener?.HandleMessage(uMsg, lParam) == true);
                 Logger.LogTrace("MainWindow constructor: HotkeyService initialized");
 
                 Logger.LogTrace("MainWindow constructor: Setting IsShownInSwitchers property");
@@ -536,9 +546,22 @@ namespace PowerDisplay
             _cliServerCts?.Dispose();
             _cliServerCts = null;
             _hotkeyService?.Dispose();
+            if (_viewModel != null)
+            {
+                _viewModel.BrightnessKeyContrastActiveChanged -= OnBrightnessKeyContrastActiveChanged;
+            }
+
+            _brightnessKeyListener?.Dispose();
             _messageHook?.Dispose();
             _viewModel?.Dispose();
             GC.SuppressFinalize(this);
+        }
+
+        private void OnBrightnessKeyContrastActiveChanged(object? sender, EventArgs e)
+        {
+            // Settings may be reloaded off the window thread; raw input is registered for this window.
+            DispatcherQueue.TryEnqueue(() =>
+                _brightnessKeyListener?.SetEnabled(_viewModel?.BrightnessKeyContrastActive == true));
         }
 
         /// <summary>

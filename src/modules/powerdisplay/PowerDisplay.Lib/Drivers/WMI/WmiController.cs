@@ -193,6 +193,48 @@ namespace PowerDisplay.Common.Drivers.WMI
         }
 
         /// <summary>
+        /// Sets the brightness of every panel the WMI brightness provider exposes, without needing a
+        /// discovered <see cref="Monitor"/>. The built-in panel stays reachable through WMI while it is
+        /// inactive ("Second screen only"), when discovery (which pairs WMI with active displays) skips it.
+        /// </summary>
+        /// <returns>True if at least one panel accepted the value; false when there is no WMI panel
+        /// (for example on a desktop PC) or every call failed.</returns>
+        public static Task<bool> SetBrightnessOnAllPanelsAsync(int brightness, CancellationToken cancellationToken = default)
+        {
+            brightness = Math.Clamp(brightness, 0, 100);
+
+            return Task.Run(
+                () =>
+                {
+                    bool anySucceeded = false;
+                    try
+                    {
+                        using var connection = new WmiConnection(WmiNamespace);
+                        foreach (var obj in connection.CreateQuery($"SELECT * FROM {BrightnessMethodClass}"))
+                        {
+                            using (WmiMethod method = obj.GetMethod("WmiSetBrightness"))
+                            using (WmiMethodParameters inParams = method.CreateInParameters())
+                            {
+                                inParams.SetPropertyValue("Timeout", "0");
+                                inParams.SetPropertyValue("Brightness", brightness.ToString(CultureInfo.InvariantCulture));
+                                uint result = obj.ExecuteMethod<uint>(method, inParams, out WmiMethodParameters outParams);
+                                outParams?.Dispose();
+                                anySucceeded |= result == 0;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Desktops have no WmiMonitorBrightnessMethods instances; WMI may also throw.
+                        Logger.LogInfo($"WMI SetBrightnessOnAllPanels({brightness}) failed: {ex.Message}");
+                    }
+
+                    return anySucceeded;
+                },
+                cancellationToken);
+        }
+
+        /// <summary>
         /// Discover the panels the WMI brightness provider exposes, pairing each against the
         /// active-display inventory. A display present in <c>WmiMonitorBrightness</c> is treated
         /// as an internal panel by <see cref="MonitorManager"/>, regardless of the OutputTechnology

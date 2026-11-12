@@ -40,6 +40,12 @@ internal sealed partial class BuiltInBrightnessWatcher : IDisposable
     /// </summary>
     public event EventHandler<int>? BrightnessChanged;
 
+    /// <summary>
+    /// Gets the last known built-in brightness percentage (0-100), or -1 before Windows' initial
+    /// echo has arrived. Read on the dispatcher thread.
+    /// </summary>
+    public int LastBrightness => _lastBrightness;
+
     public BuiltInBrightnessWatcher(DispatcherQueue dispatcherQueue)
     {
         _dispatcherQueue = dispatcherQueue ?? throw new ArgumentNullException(nameof(dispatcherQueue));
