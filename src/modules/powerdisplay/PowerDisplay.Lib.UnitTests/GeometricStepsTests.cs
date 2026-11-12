@@ -14,7 +14,7 @@ namespace PowerDisplay.UnitTests;
 [TestClass]
 public class GeometricStepsTests
 {
-    private static readonly int[] ExpectedZeroTo75 = { 75, 53, 37, 26, 18, 13, 9, 6, 4, 3, 2, 1, 0 };
+    private static readonly int[] ExpectedZeroTo75 = { 75, 65, 55, 45, 36, 29, 23, 18, 14, 11, 9, 7, 6, 5, 4, 3, 2, 1, 0 };
 
     [TestMethod]
     public void Levels_ZeroTo75_ShrinkTowardsMinimum()
@@ -38,7 +38,7 @@ public class GeometricStepsTests
     [TestMethod]
     public void StepDown_FromOffLadderValue_GoesToNextLowerLevel()
     {
-        Assert.AreEqual(53, GeometricSteps.StepDown(65, 0, 75));
+        Assert.AreEqual(55, GeometricSteps.StepDown(60, 0, 75));
         Assert.AreEqual(1, GeometricSteps.StepDown(2, 0, 75));
         Assert.AreEqual(0, GeometricSteps.StepDown(0, 0, 75));
     }
@@ -47,8 +47,19 @@ public class GeometricStepsTests
     public void StepUp_RetracesLadderAndStopsAtMaximum()
     {
         Assert.AreEqual(1, GeometricSteps.StepUp(0, 0, 75));
-        Assert.AreEqual(75, GeometricSteps.StepUp(53, 0, 75));
+        Assert.AreEqual(75, GeometricSteps.StepUp(65, 0, 75));
+        Assert.AreEqual(75, GeometricSteps.StepUp(70, 0, 75));
         Assert.AreEqual(75, GeometricSteps.StepUp(75, 0, 75));
+    }
+
+    [TestMethod]
+    public void Levels_NoStepLargerThanMaxStep()
+    {
+        var levels = GeometricSteps.Levels(0, 100);
+        for (int i = 1; i < levels.Count; i++)
+        {
+            Assert.IsTrue(levels[i - 1] - levels[i] <= GeometricSteps.DefaultMaxStep);
+        }
     }
 
     [TestMethod]

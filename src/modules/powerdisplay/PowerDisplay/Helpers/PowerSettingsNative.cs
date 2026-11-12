@@ -33,6 +33,12 @@ internal static partial class PowerSettingsNative
     internal static readonly Guid GuidVideoCurrentMonitorBrightness =
         new("aded5e82-b909-4619-9949-f5d71dac0bcb");
 
+    /// <summary>
+    /// GUID_VIDEO_SUBGROUP (SUB_VIDEO): the power-scheme subgroup that holds the brightness setting.
+    /// </summary>
+    internal static readonly Guid GuidVideoSubgroup =
+        new("7516b95f-f776-4464-8c53-06167f40cc99");
+
     internal const uint DisplayStateOff = 0;
     internal const uint DisplayStateOn = 1;
     internal const uint DisplayStateDimmed = 2;
@@ -107,4 +113,68 @@ internal static partial class PowerSettingsNative
     /// </returns>
     [LibraryImport("Powrprof.dll")]
     internal static partial uint PowerSettingUnregisterNotification(IntPtr registrationHandle);
+
+    /// <summary>
+    /// Sets the built-in display brightness the way Windows itself stores it: the active power
+    /// scheme's brightness for the current power source, then re-applies the scheme. Unlike
+    /// WmiSetBrightness this also updates the value the brightness keys step from, works while
+    /// the built-in panel is inactive, and on PCs without a WMI panel. Raises the
+    /// <see cref="GuidVideoCurrentMonitorBrightness"/> notification like a key press.
+    /// </summary>
+    /// <returns>True on success.</returns>
+    internal static unsafe bool TrySetSchemeBrightness(int percent)
+    {
+        uint value = (uint)Math.Clamp(percent, 0, 100);
+        if (PowerGetActiveScheme(IntPtr.Zero, out IntPtr schemePtr) != 0 || schemePtr == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        try
+        {
+            Guid scheme = *(Guid*)schemePtr;
+
+            // ACLineStatus: 0 offline (battery), 1 online, 255 unknown (treated as AC).
+            bool onBattery = GetSystemPowerStatus(out SystemPowerStatus status) && status.ACLineStatus == 0;
+            uint result = onBattery
+                ? PowerWriteDCValueIndex(IntPtr.Zero, in scheme, in GuidVideoSubgroup, in GuidVideoCurrentMonitorBrightness, value)
+                : PowerWriteACValueIndex(IntPtr.Zero, in scheme, in GuidVideoSubgroup, in GuidVideoCurrentMonitorBrightness, value);
+
+            return result == 0 && PowerSetActiveScheme(IntPtr.Zero, in scheme) == 0;
+        }
+        finally
+        {
+            LocalFree(schemePtr);
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct SystemPowerStatus
+    {
+        public byte ACLineStatus;
+        public byte BatteryFlag;
+        public byte BatteryLifePercent;
+        public byte SystemStatusFlag;
+        public uint BatteryLifeTime;
+        public uint BatteryFullLifeTime;
+    }
+
+    [LibraryImport("Powrprof.dll")]
+    private static partial uint PowerGetActiveScheme(IntPtr userRootPowerKey, out IntPtr activePolicyGuid);
+
+    [LibraryImport("Powrprof.dll")]
+    private static partial uint PowerWriteACValueIndex(IntPtr rootPowerKey, in Guid schemeGuid, in Guid subGroupOfPowerSettingsGuid, in Guid powerSettingGuid, uint acValueIndex);
+
+    [LibraryImport("Powrprof.dll")]
+    private static partial uint PowerWriteDCValueIndex(IntPtr rootPowerKey, in Guid schemeGuid, in Guid subGroupOfPowerSettingsGuid, in Guid powerSettingGuid, uint dcValueIndex);
+
+    [LibraryImport("Powrprof.dll")]
+    private static partial uint PowerSetActiveScheme(IntPtr userRootPowerKey, in Guid schemeGuid);
+
+    [LibraryImport("kernel32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GetSystemPowerStatus(out SystemPowerStatus systemPowerStatus);
+
+    [LibraryImport("kernel32.dll")]
+    private static partial IntPtr LocalFree(IntPtr hMem);
 }

@@ -24,17 +24,26 @@ namespace PowerDisplay.ViewModels;
 /// </summary>
 /// <remarks>
 /// At 0% Windows clamps the value and reports nothing, so the press itself is observed through
-/// raw input (<see cref="BrightnessKeyListener"/>). A raw brightness-down press with no built-in
-/// change within <see cref="ClampedPressWindow"/> is a press at the floor. Going up, Windows does
-/// raise the built-in brightness (0% to 10%); that change is consumed here and the panel is set
-/// back to 0% through WMI. Without a WMI panel (desktop PCs) brightness can't be held, so the
-/// built-in value keeps rising while contrast recovers and externals catch up when it's done.
+/// raw input (<see cref="BrightnessKeyListener"/>). A raw brightness-down press is a press at the
+/// floor when the built-in brightness did not change around it. Going up, Windows does raise the
+/// built-in brightness (0% to 10%); that change is consumed here and the brightness is written back
+/// to 0% in the power scheme (falling back to WMI).
+/// Holding a key auto-repeats about every 100 ms, so contrast steps are rate-limited to
+/// <see cref="ContrastStepInterval"/>, and crossing the 0% boundary pauses for
+/// <see cref="BoundaryDetent"/> in both directions so one held press doesn't run straight through.
 /// </remarks>
 public partial class MainViewModel
 {
-    // Windows updates the brightness setting about 1 ms after the raw HID report; auto-repeat is
-    // about 100 ms. A press is "at the floor" if no built-in change lands within this window of it.
+    // Windows updates the brightness setting about 1 ms after the raw HID report. A down press is
+    // evaluated this long after it arrives, so a change it caused has been seen by then.
     private static readonly TimeSpan ClampedPressWindow = TimeSpan.FromMilliseconds(80);
+
+    // Minimum time between two contrast steps while a key is held (auto-repeat is ~100 ms).
+    private static readonly TimeSpan ContrastStepInterval = TimeSpan.FromMilliseconds(250);
+
+    // Pause at the 0% boundary: no contrast step for this long after brightness reached 0%, and no
+    // brightness step for this long after contrast got back to its range maximum.
+    private static readonly TimeSpan BoundaryDetent = TimeSpan.FromMilliseconds(400);
 
     private bool _lowerContrastBelowMinimumBrightness;
 
@@ -43,6 +52,9 @@ public partial class MainViewModel
     private int _previousBuiltInBrightness = -1;
     private long _lastBuiltInChangeTicks;
     private long _pendingDownPressTicks;
+    private long _lastContrastStepTicks;
+    private long _zoneExitTicks;
+    private bool _holdFailureLogged;
     private DispatcherQueueTimer? _clampedPressTimer;
 
     /// <summary>
@@ -103,13 +115,14 @@ public partial class MainViewModel
             return;
         }
 
-        // This press moved the built-in brightness (for example 10% to 0%): not a press at the floor.
-        if (Math.Abs(Interlocked.Read(ref _lastBuiltInChangeTicks) - _pendingDownPressTicks) <= ClampedPressWindow.Ticks)
+        // The built-in brightness changed after, with, or shortly before this press (for example the
+        // press that took it from 10% to 0%, or a held key's next repeat): not a press at the floor yet.
+        if (Interlocked.Read(ref _lastBuiltInChangeTicks) >= _pendingDownPressTicks - BoundaryDetent.Ticks)
         {
             return;
         }
 
-        if (_builtInBrightnessWatcher.LastBrightness != 0)
+        if (_builtInBrightnessWatcher.LastBrightness != 0 || IsWithinContrastStepInterval())
         {
             return;
         }
@@ -136,8 +149,20 @@ public partial class MainViewModel
     /// <returns>True if the change was consumed and must not be mirrored to external monitors.</returns>
     private bool TryHandleContrastZone(int value, int previous)
     {
-        if (!BrightnessKeyContrastActive || !_contrastZoneActive)
+        if (!BrightnessKeyContrastActive)
         {
+            return false;
+        }
+
+        if (!_contrastZoneActive)
+        {
+            // Just got back to the contrast maximum: a held up key pauses here before brightness rises.
+            if (value > 0 && value > previous && _clock.UtcNow.Ticks - _zoneExitTicks < BoundaryDetent.Ticks)
+            {
+                _ = HoldBuiltInBrightnessAtZeroAsync(value);
+                return true;
+            }
+
             return false;
         }
 
@@ -153,7 +178,11 @@ public partial class MainViewModel
             return true;
         }
 
-        StepContrast(up: true);
+        if (!IsWithinContrastStepInterval())
+        {
+            StepContrast(up: true);
+        }
+
         _ = HoldBuiltInBrightnessAtZeroAsync(value);
         return true;
     }
@@ -172,6 +201,7 @@ public partial class MainViewModel
         }
 
         bool allAtMaximum = true;
+        bool anyChanged = false;
         foreach (var vm in targets)
         {
             int next = up
@@ -181,6 +211,7 @@ public partial class MainViewModel
             if (next != vm.Contrast)
             {
                 vm.Contrast = next;
+                anyChanged = true;
             }
 
             allAtMaximum &= next >= vm.ContrastMaximum;
@@ -188,28 +219,50 @@ public partial class MainViewModel
 
         bool wasActive = _contrastZoneActive;
         _contrastZoneActive = !allAtMaximum;
+        if (!anyChanged)
+        {
+            // Already at the range minimum (or maximum): nothing to write or log.
+            return;
+        }
+
+        _lastContrastStepTicks = _clock.UtcNow.Ticks;
         Logger.LogInfo($"[BrightnessKeyContrast] Contrast {(up ? "up" : "down")} on {targets.Count} monitor(s): {string.Join(", ", targets.Select(t => t.Contrast))}");
 
         if (wasActive && !_contrastZoneActive)
         {
+            _zoneExitTicks = _lastContrastStepTicks;
             Logger.LogInfo("[BrightnessKeyContrast] Contrast back at range maximum; brightness follows again");
         }
     }
 
+    private bool IsWithinContrastStepInterval() =>
+        _clock.UtcNow.Ticks - _lastContrastStepTicks < ContrastStepInterval.Ticks;
+
     /// <summary>
     /// Puts the built-in brightness back to 0% after Windows raised it, so the next brightness-up
-    /// press is again a step from 0%. If there is no WMI panel the value can't be held: when the
-    /// zone has just ended, mirror the current value so externals don't lag behind.
+    /// press is again a step from 0%. The power-scheme write is what the keys step from (WMI alone
+    /// changes the panel but not that value). If neither works the value can't be held: when the
+    /// zone has ended, mirror the current value so externals don't lag behind.
     /// </summary>
     private async Task HoldBuiltInBrightnessAtZeroAsync(int raisedValue)
     {
-        bool held = await WmiController.SetBrightnessOnAllPanelsAsync(0);
+        bool held = await Task.Run(() => PowerSettingsNative.TrySetSchemeBrightness(0));
+        if (!held)
+        {
+            held = await WmiController.SetBrightnessOnAllPanelsAsync(0);
+        }
+
         if (held)
         {
             return;
         }
 
-        Logger.LogInfo($"[BrightnessKeyContrast] No WMI panel to hold at 0%; built-in brightness is {raisedValue}%");
+        if (!_holdFailureLogged)
+        {
+            _holdFailureLogged = true;
+            Logger.LogWarning($"[BrightnessKeyContrast] Could not hold built-in brightness at 0% (now {raisedValue}%)");
+        }
+
         if (!_contrastZoneActive)
         {
             _dispatcherQueue.TryEnqueue(() => OnBuiltInBrightnessChanged(this, _builtInBrightnessWatcher.LastBrightness));
