@@ -6292,6 +6292,18 @@ The break timer font matches the text font.</value>
   <data name="PowerDisplay_Monitor_EnableContrast.Content" xml:space="preserve">
     <value>Display contrast slider</value>
   </data>
+  <data name="PowerDisplay_Monitor_ContrastRange.Header" xml:space="preserve">
+    <value>Contrast range</value>
+  </data>
+  <data name="PowerDisplay_Monitor_ContrastRange.Description" xml:space="preserve">
+    <value>Limit the contrast slider, and contrast values applied by profiles, to this range</value>
+  </data>
+  <data name="PowerDisplay_Monitor_ContrastMin.Header" xml:space="preserve">
+    <value>Minimum</value>
+  </data>
+  <data name="PowerDisplay_Monitor_ContrastMax.Header" xml:space="preserve">
+    <value>Maximum</value>
+  </data>
   <data name="PowerDisplay_Monitor_EnableVolume.Content" xml:space="preserve">
     <value>Display volume slider</value>
   </data>

@@ -95,7 +95,8 @@ public partial class MonitorViewModel : ObservableObject, IDisposable
     /// </summary>
     public async Task SetContrastAsync(int contrast)
     {
-        contrast = Math.Clamp(contrast, 0, 100);
+        // Honors the user's per-monitor range, so profile / restore values outside it are clamped too.
+        contrast = Math.Clamp(contrast, ContrastMinimum, ContrastMaximum);
 
         if (_contrast != contrast)
         {
@@ -245,6 +246,10 @@ public partial class MonitorViewModel : ObservableObject, IDisposable
         ShowInputSource = false;
         _showPowerState = false;
         _showColorTemperature = false;
+
+        // Full contrast range until ApplyFeatureVisibility applies the user's per-monitor limits.
+        ContrastMinimum = ContinuousValueRange.AbsoluteMinimum;
+        ContrastMaximum = ContinuousValueRange.AbsoluteMaximum;
 
         // Initialize basic properties from monitor
         _brightness = monitor.CurrentBrightness;
@@ -817,6 +822,28 @@ public partial class MonitorViewModel : ObservableObject, IDisposable
         {
             Logger.LogError($"[{Id}] Exception setting power state: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Gets the lowest contrast the flyout slider allows (user-defined per monitor in Settings).
+    /// </summary>
+    [ObservableProperty]
+    public partial int ContrastMinimum { get; private set; }
+
+    /// <summary>
+    /// Gets the highest contrast the flyout slider allows (user-defined per monitor in Settings).
+    /// </summary>
+    [ObservableProperty]
+    public partial int ContrastMaximum { get; private set; }
+
+    /// <summary>
+    /// Applies the user-defined contrast range from Settings. Does not write hardware itself; if the
+    /// current contrast is outside the new range, the flyout slider coerces its value to the limit,
+    /// which commits like a user change. Profile / restore applies clamp in <see cref="SetContrastAsync"/>.
+    /// </summary>
+    internal void SetContrastRange(int minimum, int maximum)
+    {
+        (ContrastMinimum, ContrastMaximum) = ContinuousValueRange.Normalize(minimum, maximum);
     }
 
     public int Contrast

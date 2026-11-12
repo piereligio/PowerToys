@@ -430,6 +430,7 @@ public partial class MainViewModel
         {
             // Only show features that are both enabled by user AND supported by hardware
             monitorVm.ShowContrast = monitorSettings.EnableContrast && monitorVm.SupportsContrast;
+            monitorVm.SetContrastRange(monitorSettings.ContrastMin, monitorSettings.ContrastMax);
             monitorVm.ShowVolume = monitorSettings.EnableVolume && monitorVm.SupportsVolume;
             monitorVm.ShowInputSource = monitorSettings.EnableInputSource && monitorVm.SupportsInputSource;
             monitorVm.ShowRotation = monitorSettings.EnableRotation;
@@ -639,6 +640,8 @@ public partial class MainViewModel
         target.EnableRotation = source.EnableRotation;
         target.EnableColorTemperature = source.EnableColorTemperature;
         target.EnablePowerState = source.EnablePowerState;
+        target.ContrastMin = source.ContrastMin;
+        target.ContrastMax = source.ContrastMax;
     }
 
     /// <summary>
