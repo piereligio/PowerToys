@@ -69,7 +69,7 @@ internal sealed partial class BrightnessKeyListener : IDisposable
     /// <summary>
     /// Registers or unregisters the raw input subscription. Only registered while a feature needs it.
     /// </summary>
-    public void SetEnabled(bool enabled)
+    public unsafe void SetEnabled(bool enabled)
     {
         if (_disposed || enabled == _registered || _hwnd == 0)
         {
@@ -84,7 +84,7 @@ internal sealed partial class BrightnessKeyListener : IDisposable
             Target = enabled ? _hwnd : 0, // RIDEV_REMOVE requires a null target.
         };
 
-        if (RegisterRawInputDevices(ref device, 1, (uint)Marshal.SizeOf<RawInputDevice>()))
+        if (RegisterRawInputDevices(ref device, 1, (uint)sizeof(RawInputDevice)))
         {
             _registered = enabled;
             if (!enabled)
