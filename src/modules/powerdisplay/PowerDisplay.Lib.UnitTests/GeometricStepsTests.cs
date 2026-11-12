@@ -14,12 +14,12 @@ namespace PowerDisplay.UnitTests;
 [TestClass]
 public class GeometricStepsTests
 {
+    private static readonly int[] ExpectedZeroTo75 = { 75, 53, 37, 26, 18, 13, 9, 6, 4, 3, 2, 1, 0 };
+
     [TestMethod]
     public void Levels_ZeroTo75_ShrinkTowardsMinimum()
     {
-        CollectionAssert.AreEqual(
-            new[] { 75, 53, 37, 26, 18, 13, 9, 6, 4, 3, 2, 1, 0 },
-            GeometricSteps.Levels(0, 75).ToArray());
+        CollectionAssert.AreEqual(ExpectedZeroTo75, GeometricSteps.Levels(0, 75).ToArray());
     }
 
     [TestMethod]
