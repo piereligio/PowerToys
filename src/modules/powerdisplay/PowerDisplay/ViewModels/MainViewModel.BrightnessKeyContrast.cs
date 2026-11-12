@@ -10,13 +10,15 @@ using ManagedCommon;
 using Microsoft.UI.Dispatching;
 using PowerDisplay.Common.Drivers.WMI;
 using PowerDisplay.Helpers;
+using PowerDisplay.Models;
 
 namespace PowerDisplay.ViewModels;
 
 /// <summary>
 /// MainViewModel: "lower contrast below minimum brightness". Extends "follow built-in display
 /// brightness" past 0%: once the built-in brightness is at 0%, each further brightness-down key
-/// press lowers the external monitors' contrast by <see cref="ContrastKeyStep"/>, down to each
+/// press lowers the external monitors' contrast one step of a geometric ladder
+/// (<see cref="GeometricSteps"/>: large steps near the top, 1 near the bottom), down to each
 /// monitor's contrast range minimum. Brightness-up presses then first raise contrast back to the
 /// range maximum while the brightness is held at 0%; only after that does brightness rise again.
 /// </summary>
@@ -30,8 +32,6 @@ namespace PowerDisplay.ViewModels;
 /// </remarks>
 public partial class MainViewModel
 {
-    private const int ContrastKeyStep = 10;
-
     // Windows updates the brightness setting about 1 ms after the raw HID report; auto-repeat is
     // about 100 ms. A press is "at the floor" if no built-in change lands within this window of it.
     private static readonly TimeSpan ClampedPressWindow = TimeSpan.FromMilliseconds(80);
@@ -114,7 +114,7 @@ public partial class MainViewModel
             return;
         }
 
-        StepContrast(-ContrastKeyStep);
+        StepContrast(up: false);
     }
 
     /// <summary>
@@ -153,16 +153,16 @@ public partial class MainViewModel
             return true;
         }
 
-        StepContrast(ContrastKeyStep);
+        StepContrast(up: true);
         _ = HoldBuiltInBrightnessAtZeroAsync(value);
         return true;
     }
 
     /// <summary>
-    /// Moves every target's contrast by <paramref name="delta"/> within its range and updates the
-    /// zone state. The contrast setter debounces the DDC/CI write like a slider drag.
+    /// Moves every target's contrast one ladder step within its range and updates the zone state.
+    /// The contrast setter debounces the DDC/CI write like a slider drag.
     /// </summary>
-    private void StepContrast(int delta)
+    private void StepContrast(bool up)
     {
         var targets = Monitors.Where(IsContrastKeyTarget).ToList();
         if (targets.Count == 0)
@@ -174,7 +174,10 @@ public partial class MainViewModel
         bool allAtMaximum = true;
         foreach (var vm in targets)
         {
-            int next = Math.Clamp(vm.Contrast + delta, vm.ContrastMinimum, vm.ContrastMaximum);
+            int next = up
+                ? GeometricSteps.StepUp(vm.Contrast, vm.ContrastMinimum, vm.ContrastMaximum)
+                : GeometricSteps.StepDown(vm.Contrast, vm.ContrastMinimum, vm.ContrastMaximum);
+            next = Math.Clamp(next, vm.ContrastMinimum, vm.ContrastMaximum);
             if (next != vm.Contrast)
             {
                 vm.Contrast = next;
@@ -185,7 +188,7 @@ public partial class MainViewModel
 
         bool wasActive = _contrastZoneActive;
         _contrastZoneActive = !allAtMaximum;
-        Logger.LogInfo($"[BrightnessKeyContrast] Contrast {(delta < 0 ? "down" : "up")} on {targets.Count} monitor(s): {string.Join(", ", targets.Select(t => t.Contrast))}");
+        Logger.LogInfo($"[BrightnessKeyContrast] Contrast {(up ? "up" : "down")} on {targets.Count} monitor(s): {string.Join(", ", targets.Select(t => t.Contrast))}");
 
         if (wasActive && !_contrastZoneActive)
         {
